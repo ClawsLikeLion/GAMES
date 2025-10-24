@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Black Cat Jump Duel — Online (Series Mode, 10 Mice)</title>
+<style>
+  :root{
+    --bg:#07090f; --panel:#0e1428; --panel2:#0b1020; --accent:#9ed0ff; --accent2:#b6ffd6; --text:#eef3ff; --muted:#9fb0cc;
+    --good:#22c55e; --bad:#ef4444; --gold:#ffd166; --shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--text);
+       background: radial-gradient(1200px 800px at 20% 10%, #111831 0%, var(--bg) 60%, #05070c 100%);
+       display:flex; align-items:center; justify-content:center; overflow-x:hidden}
+  .stars{position:fixed; inset:0; pointer-events:none; background-image:radial-gradient(#ffffff11 1px, transparent 1px); background-size:3px 3px; opacity:.25}
+  .wrap{width:min(1200px,96vw)}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01)); border:1px solid rgba(255,255,255,.06);
+        border-radius:22px; padding:22px; box-shadow:var(--shadow); position:relative}
+  h1{margin:.1rem 0 .4rem; font-weight:800}
+  .sub{color:var(--muted); margin:0 0 1rem}
+
+  .grid{display:grid; grid-template-columns:1.1fr .9fr; gap:16px}
+  .panel{background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:14px}
+  .panel h3{margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted)}
+
+  .arena{position:relative; border-radius:18px; overflow:hidden; min-height:360px; background:linear-gradient(180deg,rgba(158,208,255,.06),rgba(255,255,255,.02))}
+  .lanes{display:grid; grid-template-columns:1fr 1fr; gap:0}
+  .side{position:relative; padding:18px 18px 64px; min-height:300px; border-right:1px solid rgba(255,255,255,.06)}
+  .side:last-child{border-right:0}
+  .side h2{margin:0 0 4px; font-size:18px; color:var(--muted)}
+  .score{font-weight:900; font-size:42px}
+  .keyhint{position:absolute; inset:auto 12px 12px auto; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); padding:6px 10px; border-radius:10px}
+  .ground{position:absolute; left:0; right:0; bottom:18px; height:4px; background:linear-gradient(90deg, #233 0, #3a4d66 50%, #233 100%); opacity:.9}
+  .bigTap{position:absolute; inset:0; opacity:0}
+
+  .catSprite{position:absolute; bottom:22px; left:50%; transform:translateX(-50%); width:160px; filter:drop-shadow(0 10px 20px rgba(0,0,0,.5))}
+  .catSprite svg{display:block; width:100%; height:auto}
+  .jump{animation:jump 560ms cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes jump{0%{transform:translateX(-50%) translateY(0) scale(1,1)}30%{transform:translateX(-50%) translateY(-120px) scale(1.06,.94)}70%{transform:translateX(-50%) translateY(-20px) scale(.98,1.02)}100%{transform:translateX(-50%) translateY(0) scale(1,1)}}
+
+  /* Mouse obstacle */
+  .obstacle{position:absolute; bottom:22px; width:46px; height:28px}
+  .obstacle svg{width:100%; height:100%; display:block}
+
+  .center{border-top:1px solid rgba(255,255,255,.06); padding:14px; text-align:center; background:var(--panel2)}
+  .status{font-size:22px; font-weight:800; margin:8px 0}
+  .count{font-size:56px; font-weight:900}
+  .controls{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px}
+  button{appearance:none; border:0; cursor:pointer; border-radius:14px; padding:12px 16px; font-weight:800; box-shadow:0 6px 16px rgba(0,0,0,.3)}
+  .primary{background:linear-gradient(180deg,#6fb8ff,#58a8ff); color:#081020}
+  .ghost{background:transparent; color:var(--accent); border:1px solid rgba(142,197,255,.5)}
+  select,input{background:rgba(255,255,255,.06); color:var(--text); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 12px}
+
+  .flash-good{box-shadow:inset 0 0 0 200vmax rgba(34,197,94,.16)}
+  .flash-bad{box-shadow:inset 0 0 0 200vmax rgba(239,68,68,.16)}
+
+  .players{display:grid; gap:8px}
+  .pchip{padding:8px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.1); display:flex; justify-content:space-between; align-items:center}
+
+  .chat{display:grid; grid-template-rows:auto 1fr auto; height:360px}
+  .log{background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; overflow:auto}
+  .msg{margin:4px 0}
+  .msg b{color:var(--accent2)}
+
+  .tiny{color:var(--muted); font-size:12px; margin-top:6px}
+
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+  <div class="stars"></div>
+  <main class="wrap">
+    <section class="card">
+      <h1>Black Cat Jump Duel — Online</h1>
+      <p class="sub">Each run has <strong>10 mice</strong>. Jump as many as you can! Whoever clears more mice this run earns 1 point. First to N points wins.</p>
+
+      <div class="grid">
+        <div>
+          <div class="panel" style="margin-bottom:12px">
+            <h3>Room</h3>
+            <div class="row" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px">
+              <input id="playerName" placeholder="Your name" autocomplete="off" />
+              <input id="roomCode" placeholder="Room code (e.g., CATZ)" autocomplete="off" maxlength="12" />
+              <select id="targetN" title="Points to win">
+                <option value="3" selected>Best of 5 (3)</option>
+                <option value="5">Best of 9 (5)</option>
+                <option value="7">Best of 13 (7)</option>
+              </select>
+            </div>
+            <div class="row" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+              <button id="createBtn" class="primary">Create Room</button>
+              <button id="joinBtn" class="ghost">Join Room</button>
+              <button id="leaveBtn" class="ghost" style="display:none">Leave</button>
+            </div>
+            <p class="sub" id="status">Not connected.</p>
+          </div>
+
+          <div class="panel arena">
+            <div class="lanes">
+              <div class="side" id="left">
+                <h2>Left — <strong>A</strong></h2>
+                <div class="score" id="scoreL">0</div>
+                <div class="keyhint">Tap / A</div>
+                <div class="ground"></div>
+                <div class="catSprite" id="catL">
+                  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="60" cy="60" r="45" fill="#0a0f22" stroke="#a5c9ff" stroke-width="3"/>
+                    <ellipse cx="45" cy="52" rx="10" ry="6" fill="#091129"/>
+                    <ellipse cx="75" cy="52" rx="10" ry="6" fill="#091129"/>
+                    <circle cx="45" cy="52" r="3" fill="#ffd166"/>
+                    <circle cx="75" cy="52" r="3" fill="#ffd166"/>
+                    <circle cx="60" cy="70" r="3" fill="#f09fb5"/>
+                  </svg>
+                </div>
+                <button class="bigTap" id="tapL" aria-label="Left tap area"></button>
+              </div>
+              <div class="side" id="right">
+                <h2>Right — <strong>L</strong></h2>
+                <div class="score" id="scoreR">0</div>
+                <div class="keyhint">Tap / L</div>
+                <div class="ground"></div>
+                <div class="catSprite" id="catR">
+                  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="60" cy="60" r="45" fill="#0a0f22" stroke="#a5c9ff" stroke-width="3"/>
+                    <ellipse cx="45" cy="52" rx="10" ry="6" fill="#091129"/>
+                    <ellipse cx="75" cy="52" rx="10" ry="6" fill="#091129"/>
+                    <circle cx="45" cy="52" r="3" fill="#ffd166"/>
+                    <circle cx="75" cy="52" r="3" fill="#ffd166"/>
+                    <circle cx="60" cy="70" r="3" fill="#f09fb5"/>
+                  </svg>
+                </div>
+                <button class="bigTap" id="tapR" aria-label="Right tap area"></button>
+              </div>
+            </div>
+
+            <div class="center">
+              <div id="statusPlay" class="status">Host: press Start Run</div>
+              <div id="count" class="count" aria-live="polite"></div>
+              <div class="controls">
+                <button id="start" class="primary">▶ Start Run</button>
+                <button id="reset" class="ghost">↺ Reset Match</button>
+              </div>
+              <div class="tiny">Jump with A / L (or tap). 10 mice per run. Clears this run → 1 match point.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <h3>Players</h3>
+            <div class="players" id="players"></div>
+          </div>
+          <div class="panel chat" style="margin-top:12px">
+            <h3>Room Chat</h3>
+            <div id="chatLog" class="log" aria-live="polite"></div>
+            <form id="chatForm" class="row" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px">
+              <input id="chatInput" placeholder="Type a message…" autocomplete="off" />
+              <button class="primary" aria-label="Send">Send</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script type="module">
+  // ==== Firebase config (same as your working file) ====
+  const firebaseConfig = {
+    apiKey: "AIzaSyD9CfLHfF0xP92OnoQ4vVSnfQ7YmJoVSF8",
+    authDomain: "clawsgame1.firebaseapp.com",
+    databaseURL: "https://clawsgame1-default-rtdb.us-central1.firebasedatabase.app",
+    projectId: "clawsgame1",
+    storageBucket: "clawsgame1.firebasestorage.app",
+    messagingSenderId: "364364250757",
+    appId: "1:364364250757:web:aca903a3e17f9f245db3ec"
+  };
+
+  // Firebase CDN imports
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import { getDatabase, ref, set, get, push, onValue, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  // ===== Utilities =====
+  const uid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  const $ = (id)=>document.getElementById(id);
+  const vibrate = (p)=>{ if('vibrate' in navigator){ navigator.vibrate(p);} };
+  const rnd = (a,b)=>Math.random()*(b-a)+a;
+  const now = ()=>Date.now();
+
+  // ===== DOM =====
+  const nameInput = $('playerName');
+  const codeInput = $('roomCode');
+  const targetSel = $('targetN');
+  const createBtn = $('createBtn');
+  const joinBtn = $('joinBtn');
+  const leaveBtn = $('leaveBtn');
+  const statusEl = $('status');
+  const statusPlay = $('statusPlay');
+  const playersEl = $('players');
+  const startBtn = $('start');
+  const resetBtn = $('reset');
+  const scoreL = $('scoreL');
+  const scoreR = $('scoreR');
+  const left = $('left');
+  const right = $('right');
+  const tapL = $('tapL');
+  const tapR = $('tapR');
+  const catL = $('catL');
+  const catR = $('catR');
+  const countEl = $('count');
+  const chatLog = $('chatLog');
+  const chatForm = $('chatForm');
+  const chatInput = $('chatInput');
+
+  // ===== Game State (match points still to target N) =====
+  let roomCode=null, isHost=false, target=3;
+  let sL=0, sR=0; // match points
+  let roundActive=false; // a "run" of multiple mice
+  let timerCountdown=null;
+
+  // series-run state (local only)
+  const SERIES_TOTAL = 10;         // 10 mice per run
+  const GAP_BETWEEN = 420;         // ms pause between mice
+  const speedBase  = 90;          // px/sec baseline (friendly)
+  let index=0;                     // which mouse (0..9)
+  let pendingL=false, pendingR=false;
+  let clearsL=0, clearsR=0;        // per-run clears
+  let obsTimerL=null, obsTimerR=null;
+  let airL=0, airR=0;
+  // ===== Firebase helpers =====
+  const roomRef = (c)=>ref(db, `rooms/${c}`);
+  const playerRef = (c,id)=>ref(db, `rooms/${c}/players/${id}`);
+  const chatRef = (c)=>ref(db, `rooms/${c}/chat`);
+
+  function setStatus(msg){ statusEl.textContent = msg; }
+  function setPlayStatus(msg){ statusPlay.textContent = msg; }
+  function updateScore(){ scoreL.textContent=sL; scoreR.textContent=sR; }
+  function randomRoom(){ const abc='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({length:4},()=>abc[Math.floor(Math.random()*abc.length)]).join(''); }
+
+  // ===== Chat (unchanged) =====
+  function appendMsg(m){ const div=document.createElement('div'); div.className='msg'; div.innerHTML = m.type==='system' ? `<i>${m.text}</i>` : `<b>${m.name||'Anon'}:</b> ${m.text}`; chatLog.appendChild(div); }
+  async function addChat(typeOrName, text){ if(!roomCode) return; const msg=(typeOrName==='system')?{type:'system',text,ts:now()}:{type:'user',name:typeOrName,text,ts:now()}; try{ await set(push(chatRef(roomCode)), msg);}catch(_){} }
+
+  // ===== Room join/create (unchanged) =====
+  async function createRoom(){ const name=(nameInput.value||'Player').slice(0,20); const code=(codeInput.value||randomRoom()).toUpperCase(); roomCode=code; isHost=true; target=Number(targetSel.value||3);
+    await set(roomRef(code), { createdAt: serverTimestamp(), startAt:null, ended:false, host:uid, target });
+    await set(playerRef(code, uid), { name, score:0, side:'L', joinedAt: serverTimestamp() });
+    subscribeRoom(); setStatus(`Room ${code} created. Share this code with your friend.`); leaveBtn.style.display='inline-block'; addChat('system',`Room created: ${code}`); }
+
+  async function joinRoom(){ const code=(codeInput.value||'').toUpperCase(); if(!code){ alert('Enter a room code.'); return; } const snap=await get(roomRef(code)); if(!snap.exists()){ alert('Room not found.'); return; }
+    const name=(nameInput.value||'Player').slice(0,20); roomCode=code; isHost=false; await set(playerRef(code, uid), { name, score:0, side:'R', joinedAt: serverTimestamp() }); subscribeRoom(); setStatus(`Joined room ${code}. Wait for host to start.`); leaveBtn.style.display='inline-block'; addChat('system', `${name} joined as Right`); }
+
+  async function leaveRoom(){ if(!roomCode) return; roomCode=null; isHost=false; playersEl.innerHTML=''; setStatus('Left room.'); leaveBtn.style.display='none'; resetLocal(); }
+
+  function subscribeRoom(){ onValue(roomRef(roomCode), (snap)=>{ const data=snap.val(); if(!data) return; const players=data.players||{}; playersEl.innerHTML='';
+    Object.values(players).forEach(p=>{ const div=document.createElement('div'); div.className='pchip'; div.innerHTML=`<span>${p.name||'Player'} (${p.side||'?'})</span><strong>${p.score||0}</strong>`; playersEl.appendChild(div); });
+    if(typeof data.target==='number'){ target=data.target; }
+    if(data.startAt && !roundActive){ scheduleStart(data.startAt); }
+    if(data.ended && roundActive){ endSeries('ended'); }
+  });
+  onValue(chatRef(roomCode), (snap)=>{ const v=snap.val(); chatLog.innerHTML=''; if(v){ Object.values(v).sort((a,b)=>a.ts-b.ts).forEach(m=>appendMsg(m)); chatLog.scrollTop=chatLog.scrollHeight; } }); }
+
+  // ===== Run flow: 10 mice per run, then compare clears =====
+  function resetLocal(){ sL=0; sR=0; updateScore(); setPlayStatus('Host: press Start Run'); countEl.textContent=''; roundActive=false; stopLane('L'); stopLane('R'); }
+
+  async function hostStart(){ if(!roomCode){ alert('Create or join a room first.'); return; } const epoch = now()+2500; await update(roomRef(roomCode), { ended:false, startAt: epoch }); }
+
+  function scheduleStart(epoch){
+    roundActive=true; index=0; clearsL=0; clearsR=0; pendingL=false; pendingR=false;
+    setPlayStatus('Get ready…');
+    countdownTo(epoch);
+    setTimeout(()=>{ if(!roundActive) return; setPlayStatus('Run!'); spawnBoth(); }, Math.max(0, epoch - now()));
+  }
+
+  function countdownTo(epoch){ clearInterval(timerCountdown); timerCountdown=setInterval(()=>{ const left=epoch-now(); if(left<=0){ clearInterval(timerCountdown); countEl.textContent=''; return;} countEl.textContent = Math.ceil(left/1000); }, 120); }
+
+  function spawnBoth(){
+    if(index>=SERIES_TOTAL){ endSeries('done'); return; }
+    startObstacle('L');
+    startObstacle('R');
+    pendingL=true; pendingR=true;
+  }
+
+  function afterOneResolved(){
+    if(pendingL || pendingR) return; // wait until both lanes resolved this index
+    index++;
+    if(index>=SERIES_TOTAL){ setTimeout(()=>endSeries('done'), 200); return; }
+    setTimeout(()=>{ if(roundActive) spawnBoth(); }, GAP_BETWEEN);
+  }
+
+  function endSeries(reason){
+    stopLane('L'); stopLane('R'); roundActive=false;
+    // award 1 match point to whoever cleared more this run
+    if(clearsL===clearsR){ setPlayStatus(`Tie ${clearsL}–${clearsR}. No point awarded.`); update(roomRef(roomCode), { startAt:null, ended:false }); return; }
+    if(clearsL>clearsR){ sL++; left.classList.add('flash-good'); right.classList.add('flash-bad'); setPlayStatus(`Left wins the run ${clearsL}–${clearsR}!`); }
+    else { sR++; right.classList.add('flash-good'); left.classList.add('flash-bad'); setPlayStatus(`Right wins the run ${clearsR}–${clearsL}!`); }
+    updateScore();
+    const winSide = (sL>=target)?'L':(sR>=target)?'R':null;
+    if(winSide){ setPlayStatus((winSide==='L'?'Left':'Right')+' wins the match!'); update(roomRef(roomCode), { ended:true, startAt:null }); }
+    else { update(roomRef(roomCode), { startAt:null, ended:false }); }
+    setTimeout(()=>{ left.classList.remove('flash-good','flash-bad'); right.classList.remove('flash-good','flash-bad'); }, 260);
+  }
+
+  // ===== Obstacles =====
+function startObstacle(side){
+  const lane = (side==='L') ? left : right;
+  removeObstacle(side);
+
+  const obs = document.createElement('div');
+  obs.className='obstacle';
+  obs.style.right='-80px';          // start further off-screen so it's visible
+  obs.style.bottom='22px';
+  obs.innerHTML = `
+    <svg viewBox="0 0 70 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse cx="28" cy="26" rx="22" ry="14" fill="#bfe3ff"/>
+      <circle  cx="48" cy="26" r="12" fill="#bfe3ff"/>
+      <circle  cx="53" cy="24" r="3.2" fill="#0a0f22"/>
+      <path d="M12 30 Q 4 34, 4 42" stroke="#bfe3ff" stroke-width="3.5" fill="none"/>
+    </svg>`;
+  lane.appendChild(obs);
+
+  const t0 = now();
+  const pxPerSec = speedBase + rnd(-8, 18);
+  let resolved = false; // score exactly once per mouse
+
+  const tick = ()=>{
+    if(!roundActive) return;
+
+    // move mouse
+    const dt = (now() - t0)/1000;
+    const x  = dt * pxPerSec;
+    obs.style.right = x + 'px';
+
+    // decay airborne timers a little each frame (~16ms per tick)
+    if(side==='L'){ if(airL>0) airL = Math.max(0, airL-16); }
+    else          { if(airR>0) airR = Math.max(0, airR-16); }
+
+    // evaluate ONLY when the mouse reaches the cat's center X
+    const catEl = (side==='L') ? catL : catR;
+    const obsRect = obs.getBoundingClientRect();
+    const catRect = catEl.getBoundingClientRect();
+    const catCenterX = (catRect.left + catRect.right) / 2;
+
+    if(!resolved && obsRect.left <= catCenterX){
+      resolved = true;
+      const airborne = (side==='L') ? (airL>0) : (airR>0);
+      if(airborne){
+        // CLEAR
+        if(side==='L'){ pendingL=false; clearsL++; } else { pendingR=false; clearsR++; }
+        finishLane(side, true);
+      } else {
+        // HIT
+        if(side==='L'){ pendingL=false; } else { pendingR=false; }
+        finishLane(side, false);
+      }
+      return;
+    }
+
+    // safety: if it somehow travels fully past, end it as hit
+    const laneRect = lane.getBoundingClientRect();
+    if(parseFloat(obs.style.right) > laneRect.width + 120){
+      if(!resolved){
+        if(side==='L'){ pendingL=false; } else { pendingR=false; }
+        finishLane(side, false);
+      }
+    }
+  };
+
+  const id = setInterval(tick, 16);
+  if(side==='L') obsTimerL = id; else obsTimerR = id;
+}
+
+  function finishLane(side, cleared){
+    // small flash feedback per lane
+    if(cleared){ if(side==='L'){ left.classList.add('flash-good'); setTimeout(()=>left.classList.remove('flash-good'),180); } else { right.classList.add('flash-good'); setTimeout(()=>right.classList.remove('flash-good'),180); } }
+    else { if(side==='L'){ left.classList.add('flash-bad'); setTimeout(()=>left.classList.remove('flash-bad'),180); } else { right.classList.add('flash-bad'); setTimeout(()=>right.classList.remove('flash-bad'),180); } }
+    stopLane(side);
+    afterOneResolved();
+  }
+
+  function stopLane(side){ if(side==='L'){ if(obsTimerL){ clearInterval(obsTimerL); obsTimerL=null; } removeObstacle('L'); } else { if(obsTimerR){ clearInterval(obsTimerR); obsTimerR=null; } removeObstacle('R'); } }
+  function removeObstacle(side){ const lane=(side==='L')?left:right; const old=lane.querySelector('.obstacle'); if(old) old.remove(); }
+
+  // ===== Input =====
+  function jump(side){
+  if(!roundActive) return;
+  const cat = (side==='L') ? catL : catR;
+  // visual hop
+  cat.classList.remove('jump'); void cat.offsetWidth; cat.classList.add('jump');
+  vibrate([30,30]);
+  // make the jump matter for ~650ms
+  if(side==='L'){ airL = 650; } else { airR = 650; }
+}
+  // ===== Events =====
+  startBtn.addEventListener('click', ()=>{ if(isHost) hostStart(); else alert('Only host can start runs.'); });
+  resetBtn.addEventListener('click', ()=>{ sL=sR=0; updateScore(); setPlayStatus('Scores reset. Press Start Run'); if(roomCode){ update(roomRef(roomCode), { ended:false, startAt:null }); } });
+
+  window.addEventListener('keydown', (e)=>{ if(e.key==='a'||e.key==='A') jump('L'); if(e.key==='l'||e.key==='L') jump('R'); if(e.code==='Space' && isHost) hostStart(); });
+  tapL.addEventListener('click', ()=>jump('L')); tapR.addEventListener('click', ()=>jump('R'));
+
+  createBtn.addEventListener('click', createRoom); joinBtn.addEventListener('click', joinRoom); leaveBtn.addEventListener('click', leaveRoom);
+
+  chatForm.addEventListener('submit', async (e)=>{ e.preventDefault(); const txt=chatInput.value.trim(); if(!txt||!roomCode) return; await addChat(nameInput.value||'Player', txt); chatInput.value=''; });
+
+  // init
+  updateScore();
+</script>
+</body>
+</html>
